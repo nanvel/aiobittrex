@@ -1,7 +1,9 @@
 Bittrex API python async wrapper
 ================================
 
-Requirements: Python3.6.
+Requirements:
+    - Python3.6
+    - ujson
 
 Usage
 -----
@@ -471,3 +473,147 @@ Get the latest candle for the market.
 
 Socket
 ------
+
+Bittrex socket documentation: https://bittrex.github.io/
+
+Usage example:
+
+.. code-block:: python
+
+    from aiobittrex import BittrexSocket
+
+
+    socket = BittrexSocket()
+    market = await socket.get_market(markets=['BTC-ETH', 'BTC-TRX'])
+    print(json.dumps(market, indent=2))
+
+    async for m in socket.listen_market(markets=['BTC-ETH', 'BTC-TRX']):
+        print(json.dumps(m, indent=2))
+
+
+```listen_account()```
+~~~~~~~~~~~~~~~~~~~~~~
+
+Listen for orders and balances updates for the account.
+
+```get_market(markets)```
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Get market orders.
+
+.. code-block:: json
+
+    {
+        "BTC-TRX": {
+            "market_name": null,
+            "nonce": 11333,
+            "buys": [{
+                "quantity": 428996.57288094,
+                "rate": 8.65e-06
+            }],
+            "sells": [{
+                "quantity": 91814.92314615,
+                "rate": 8.66e-06
+            }],
+            "fills": [{
+                "id": 5020055,
+                "time_stamp": 1524904823903,
+                "quantity": 34413.0,
+                "price": 8.66e-06,
+                "total": 0.29801658,
+                "fill_type": "FILL",
+                "order_type": "BUY"
+            }]
+        }
+    }
+
+```listen_market(markets)```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Listen for market orders updates.
+
+.. code-block:: json
+
+    {
+        "market_name": "BTC-TRX",
+        "nonce": 11919,
+        "buys": [],
+        "sells": [{
+            "type": 2,
+            "rate": 8.7e-06,
+            "quantity": 197473.52148216
+        }],
+        "fills": [{
+            "order_type": "BUY",
+            "rate": 8.7e-06,
+            "quantity": 28376.84449489,
+            "time_stamp": 1524905878547
+        }]
+    }
+
+```get_summary()```
+~~~~~~~~~~~~~~~~~~~
+
+Get markets summaries.
+
+.. code-block:: json
+
+    {
+        "nonce": 5108,
+        "summaries": [{
+            "market_name": "BTC-ADA",
+            "high": 3.388e-05,
+            "low": 3.116e-05,
+            "volume": 45482116.6444527,
+            "last": 3.337e-05,
+            "base_volume": 1481.80378307,
+            "time_stamp": 1524907023543,
+            "bid": 3.333e-05,
+            "ask": 3.337e-05,
+            "open_buy_orders": 5195,
+            "open_sell_orders": 15219,
+            "prev_day": 3.118e-05,
+            "created": 1506668518873
+        }]
+    }
+
+```listen_summary_light()```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Markets summary updates light.
+
+.. code-block:: json
+
+    {
+        "deltas": [{
+            "market_name": "BTC-ADT",
+            "last": 7.37e-06,
+            "base_volume": 118.05
+        }]
+    }
+
+```listen_summary()```
+~~~~~~~~~~~~~~~~~~~~~~
+
+Markets summary updates.
+
+.. code-block:: json
+
+    {
+        "nonce": 5069,
+        "deltas": [{
+            "market_name": "BTC-ETH",
+            "high": 0.07371794,
+            "low": 0.071695,
+            "volume": 9535.44197173,
+            "last": 0.07318011,
+            "base_volume": 695.21677418,
+            "time_stamp": 1524907827823,
+            "bid": 0.07318011,
+            "ask": 0.07346991,
+            "open_buy_orders": 4428,
+            "open_sell_orders": 3860,
+            "prev_day": 0.07188519,
+            "created": 1439542944817
+        }]
+    }
