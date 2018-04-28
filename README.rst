@@ -1,9 +1,9 @@
 Bittrex API python async wrapper
 ================================
 
-Requirements:
-    - Python3.6
-    - ujson
+Requirements: Python3.6
+
+Installation: ``pip install aiobittrex``
 
 Usage
 -----
