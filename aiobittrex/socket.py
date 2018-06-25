@@ -98,6 +98,8 @@ class BittrexSocket:
 
     @classmethod
     def replace_keys(cls, d):
+        if not isinstance(d, dict):
+            return d
         result = {}
         for key, value in d.items():
             key = cls.KEYS.get(key, key)
@@ -222,7 +224,7 @@ class BittrexSocket:
             async for m in self._listen(session=session,
                                         endpoint='QueryExchangeState',
                                         messages=[[m] for m in markets]):
-                if 'R' not in m or not m['R']:
+                if 'R' not in m:
                     continue
                 i = int(m['I'])
                 result[markets[i - 1]] = self.replace_keys(self._decode(m['R']))
@@ -347,5 +349,4 @@ class BittrexSocket:
                     if row['M'] != 'uS':
                         continue
                     for a in row['A']:
-                        if a:
-                            yield self.replace_keys(self._decode(a))
+                        yield self.replace_keys(self._decode(a))
