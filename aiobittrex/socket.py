@@ -347,4 +347,5 @@ class BittrexSocket:
                     if row['M'] != 'uS':
                         continue
                     for a in row['A']:
-                        yield self.replace_keys(self._decode(a))
+                        if a:
+                            yield self.replace_keys(self._decode(a))

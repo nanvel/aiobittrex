@@ -532,6 +532,11 @@ Get market orders.
 
 Listen for market orders updates.
 
+Delta types:
+    - 0 = ADD
+    - 1 = REMOVE
+    - 2 = UPDATE
+
 .. code-block:: json
 
     {
