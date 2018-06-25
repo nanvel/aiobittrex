@@ -222,7 +222,7 @@ class BittrexSocket:
             async for m in self._listen(session=session,
                                         endpoint='QueryExchangeState',
                                         messages=[[m] for m in markets]):
-                if 'R' not in m:
+                if 'R' not in m or not m['R']:
                     continue
                 i = int(m['I'])
                 result[markets[i - 1]] = self.replace_keys(self._decode(m['R']))
