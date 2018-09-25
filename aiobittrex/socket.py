@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import json
@@ -10,7 +11,6 @@ from zlib import decompress, MAX_WBITS
 import aiohttp
 
 from .errors import BittrexError
-
 
 logger = logging.getLogger(__name__)
 
@@ -84,12 +84,15 @@ class BittrexSocket:
         'z': 'pending'
     }
 
-    def __init__(self, api_key=None, api_secret=None):
+    def __init__(self, api_key=None, api_secret=None, loop=None):
         self.api_key = api_key
         self.api_secret = api_secret
         self._socket_url = None
+        self._loop = loop or asyncio.get_event_loop()
+        self._session = aiohttp.ClientSession(loop=loop)
 
-    def _decode(self, message):
+    @staticmethod
+    def _decode(message):
         try:
             deflated_msg = decompress(b64decode(message, validate=True), -MAX_WBITS)
         except SyntaxError as e:
@@ -111,7 +114,7 @@ class BittrexSocket:
                 result[key] = value
         return result
 
-    async def _get_socket_url(self, session):
+    async def _get_socket_url(self):
         if self._socket_url is None:
             conn_data = json.dumps([{'name': self.SOCKET_HUB}])
             url = self.SOCKET_URL + 'negotiate' + '?' + urlencode({
@@ -120,7 +123,7 @@ class BittrexSocket:
                 '_': round(time.time() * 1000)
             })
 
-            async with session.get(url) as r:
+            async with self._session.get(url) as r:
                 socket_conf = await r.json()
 
             self._socket_url = self.SOCKET_URL.replace('https', 'wss') + 'connect' + '?' + urlencode({
@@ -133,40 +136,39 @@ class BittrexSocket:
 
         return self._socket_url
 
-    async def _listen(self, session, endpoint, messages):
-        socket_url = await self._get_socket_url(session=session)
+    async def create_ws(self):
+        return await self._session.ws_connect(await self._get_socket_url())
 
-        async with session.ws_connect(socket_url) as ws:
+    async def _listen(self, endpoint, messages, ws=None):
+        ws = ws or await self.create_ws()
 
-            for n, m in enumerate(messages, start=1):
-                await ws.send_str(json.dumps({
-                    'H': self.SOCKET_HUB,
-                    'M': endpoint,
-                    'A': m,
-                    'I': n
-                }))
+        for n, m in enumerate(messages, start=1):
+            await ws.send_str(json.dumps({
+                'H': self.SOCKET_HUB,
+                'M': endpoint,
+                'A': m,
+                'I': n
+            }))
 
-            async for msg in ws:
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    decoded_message = json.loads(msg.data)
-                    if 'E' in decoded_message:
-                        raise BittrexError(message=decoded_message['E'])
-                    yield decoded_message
-                elif msg.type == aiohttp.WSMsgType.closed:
-                    break
-                elif msg.type == aiohttp.WSMsgType.error:
-                    break
-                else:
-                    logger.warning("Message: {}".format(msg.type))
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                decoded_message = json.loads(msg.data)
+                if 'E' in decoded_message:
+                    raise BittrexError(message=decoded_message['E'])
+                yield decoded_message
+            elif msg.type == aiohttp.WSMsgType.closed:
+                break
+            elif msg.type == aiohttp.WSMsgType.error:
+                break
+            else:
+                logger.warning("Message: {}".format(msg.type))
 
-    async def _get_auth_context(self, session):
-        async for m in self._listen(session=session,
-                                    endpoint='GetAuthContext',
-                                    messages=[[self.api_key]]):
+    async def _get_auth_context(self):
+        async for m in self._listen(endpoint='GetAuthContext', messages=[[self.api_key]]):
             if 'R' in m:
                 return m['R']
 
-    async def listen_account(self):
+    async def listen_account(self, ws=None):
         """
         Listen to account balance and orders updates.
 
@@ -174,24 +176,21 @@ class BittrexSocket:
         uB - balance delta
         uO - order delta
         """
-        async with aiohttp.ClientSession() as session:
-            challenge = await self._get_auth_context(session=session)
-            signature = hmac.new(
-                key=self.api_secret.encode(),
-                msg=challenge.encode(),
-                digestmod=hashlib.sha512
-            ).hexdigest()
-            async for m in self._listen(session=session,
-                                        endpoint='Authenticate',
-                                        messages=[[self.api_key, signature]]):
-                if 'R' in m:
-                    assert m['R']
+        challenge = await self._get_auth_context()
+        signature = hmac.new(
+            key=self.api_secret.encode(),
+            msg=challenge.encode(),
+            digestmod=hashlib.sha512
+        ).hexdigest()
+        async for m in self._listen(endpoint='Authenticate', messages=[[self.api_key, signature]], ws=ws):
+            if 'R' in m:
+                assert m['R']
 
-                for row in m.get('M') or []:
-                    if row['M'] not in ('uB', 'uO'):
-                        continue
-                    for a in row['A']:
-                        yield {self.replace_keys(self._decode(a))}
+            for row in m.get('M') or []:
+                if row['M'] not in ('uB', 'uO'):
+                    continue
+                for a in row['A']:
+                    yield {self.replace_keys(self._decode(a))}
 
     async def get_market(self, markets):
         """
@@ -220,19 +219,16 @@ class BittrexSocket:
         }
         """
         result = {}
-        async with aiohttp.ClientSession() as session:
-            async for m in self._listen(session=session,
-                                        endpoint='QueryExchangeState',
-                                        messages=[[m] for m in markets]):
-                if 'R' not in m:
-                    continue
-                i = int(m['I'])
-                result[markets[i - 1]] = self.replace_keys(self._decode(m['R']))
-                if len(result) >= len(markets):
-                    break
+        async for m in self._listen(endpoint='QueryExchangeState', messages=[[m] for m in markets]):
+            if 'R' not in m:
+                continue
+            i = int(m['I'])
+            result[markets[i - 1]] = self.replace_keys(self._decode(m['R']))
+            if len(result) >= len(markets):
+                break
         return result
 
-    async def listen_market(self, markets):
+    async def listen_market(self, markets, ws=None):
         """
         Listen to market updates.
 
@@ -256,15 +252,12 @@ class BittrexSocket:
             }]
         }
         """
-        async with aiohttp.ClientSession() as session:
-            async for m in self._listen(session=session,
-                                        endpoint='SubscribeToExchangeDeltas',
-                                        messages=[[m] for m in markets]):
-                for row in m.get('M') or []:
-                    if row['M'] != 'uE':
-                        continue
-                    for a in row['A']:
-                        yield self.replace_keys(self._decode(a))
+        async for m in self._listen(endpoint='SubscribeToExchangeDeltas', messages=[[m] for m in markets], ws=ws):
+            for row in m.get('M') or []:
+                if row['M'] != 'uE':
+                    continue
+                for a in row['A']:
+                    yield self.replace_keys(self._decode(a))
 
     async def get_summary(self):
         """
@@ -287,14 +280,11 @@ class BittrexSocket:
             }]
         }
         """
-        async with aiohttp.ClientSession() as session:
-            async for m in self._listen(session=session,
-                                        endpoint='QuerySummaryState',
-                                        messages=['']):
-                if 'R' in m:
-                    return self.replace_keys(self._decode(m['R']))
+        async for m in self._listen(endpoint='QuerySummaryState', messages=['']):
+            if 'R' in m:
+                return self.replace_keys(self._decode(m['R']))
 
-    async def listen_summary_light(self):
+    async def listen_summary_light(self, ws=None):
         """
         callbacks:
         - uL - light summary delta
@@ -307,17 +297,14 @@ class BittrexSocket:
             }]
         }
         """
-        async with aiohttp.ClientSession() as session:
-            async for m in self._listen(session=session,
-                                        endpoint='SubscribeToSummaryLiteDeltas',
-                                        messages=['']):
-                for row in m.get('M') or []:
-                    if row['M'] != 'uL':
-                        continue
-                    for a in row['A']:
-                        yield self.replace_keys(self._decode(a))
+        async for m in self._listen(endpoint='SubscribeToSummaryLiteDeltas', messages=[''], ws=ws):
+            for row in m.get('M') or []:
+                if row['M'] != 'uL':
+                    continue
+                for a in row['A']:
+                    yield self.replace_keys(self._decode(a))
 
-    async def listen_summary(self):
+    async def listen_summary(self, ws=None):
         """
         callbacks:
         - uS - summary delta
@@ -341,12 +328,9 @@ class BittrexSocket:
             }]
         }
         """
-        async with aiohttp.ClientSession() as session:
-            async for m in self._listen(session=session,
-                                        endpoint='SubscribeToSummaryDeltas',
-                                        messages=['']):
-                for row in m.get('M') or []:
-                    if row['M'] != 'uS':
-                        continue
-                    for a in row['A']:
-                        yield self.replace_keys(self._decode(a))
+        async for m in self._listen(endpoint='SubscribeToSummaryDeltas', messages=[''], ws=ws):
+            for row in m.get('M') or []:
+                if row['M'] != 'uS':
+                    continue
+                for a in row['A']:
+                    yield self.replace_keys(self._decode(a))
