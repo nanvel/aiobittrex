@@ -41,7 +41,7 @@ def read(file_name):
 
 setup(
     name="aiobittrex",
-    version='0.0.4',
+    version='0.1.0',
     description="Async Bittrex api wrapper.",
     long_description=read('README.rst'),
     license='The MIT License',
