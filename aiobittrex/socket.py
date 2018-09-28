@@ -166,8 +166,8 @@ class BittrexSocket:
             else:
                 logger.warning("Message: {}".format(msg.type))
 
-    async def _get_auth_context(self):
-        async for m in self._listen(endpoint='GetAuthContext', messages=[[self.api_key]]):
+    async def _get_auth_context(self, ws):
+        async for m in self._listen(endpoint='GetAuthContext', messages=[[self.api_key]], ws=ws):
             if 'R' in m:
                 return m['R']
 
@@ -179,7 +179,7 @@ class BittrexSocket:
         uB - balance delta
         uO - order delta
         """
-        challenge = await self._get_auth_context()
+        challenge = await self._get_auth_context(ws)
         signature = hmac.new(
             key=self.api_secret.encode(),
             msg=challenge.encode(),
