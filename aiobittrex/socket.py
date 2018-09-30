@@ -98,7 +98,7 @@ class BittrexSocket:
     def _decode(message):
         try:
             deflated_msg = decompress(b64decode(message, validate=True), -MAX_WBITS)
-        except SyntaxError as e:
+        except SyntaxError:
             deflated_msg = decompress(b64decode(message, validate=True))
         return json.loads(deflated_msg.decode())
 
