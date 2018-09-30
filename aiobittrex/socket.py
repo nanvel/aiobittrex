@@ -92,7 +92,7 @@ class BittrexSocket:
         self._session = aiohttp.ClientSession(loop=loop)
 
     def __del__(self):
-        self._session.close()
+        self._loop.run_until_complete(self._session.close())
 
     @staticmethod
     def _decode(message):
