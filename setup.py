@@ -26,6 +26,10 @@ tornado_botocore/__init__.py and re-run the above command.
 For more information on creating source distributions, see
 http://docs.python.org/2/distutils/sourcedist.html
 
+Upload to PyPI using twine:
+python setup.py bdist_wheel --universal
+python setup.py sdist
+twine upload dist/*
 """
 import os
 
@@ -41,7 +45,7 @@ def read(file_name):
 
 setup(
     name="aiobittrex",
-    version='0.1.0',
+    version='0.1.1',
     description="Async Bittrex api wrapper.",
     long_description=read('README.rst'),
     license='The MIT License',
