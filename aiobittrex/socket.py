@@ -92,13 +92,13 @@ class BittrexSocket:
         self._session = aiohttp.ClientSession(loop=loop)
 
     def __del__(self):
-        self._session.close()
+        self._loop.run_until_complete(self._session.close())
 
     @staticmethod
     def _decode(message):
         try:
             deflated_msg = decompress(b64decode(message, validate=True), -MAX_WBITS)
-        except SyntaxError as e:
+        except SyntaxError:
             deflated_msg = decompress(b64decode(message, validate=True))
         return json.loads(deflated_msg.decode())
 
@@ -193,7 +193,7 @@ class BittrexSocket:
                 if row['M'] not in ('uB', 'uO'):
                     continue
                 for a in row['A']:
-                    yield {self.replace_keys(self._decode(a))}
+                    yield self.replace_keys(self._decode(a))
 
     async def get_market(self, markets):
         """
