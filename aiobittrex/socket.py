@@ -10,7 +10,7 @@ from zlib import decompress, MAX_WBITS
 
 import aiohttp
 
-from .errors import BittrexError
+from .errors import BittrexError, BittrexSocketConnectionClosed, BittrexSocketConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -160,9 +160,11 @@ class BittrexSocket:
                     raise BittrexError(message=decoded_message['E'])
                 yield decoded_message
             elif msg.type == aiohttp.WSMsgType.closed:
-                break
+                logger.warning('Websocket connection closed: %s', msg)
+                raise BittrexSocketConnectionClosed
             elif msg.type == aiohttp.WSMsgType.error:
-                break
+                logger.error('Websocket connection error: %s', msg)
+                raise BittrexSocketConnectionError
             else:
                 logger.warning("Message: {}".format(msg.type))
 
