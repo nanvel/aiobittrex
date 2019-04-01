@@ -35,7 +35,8 @@ class BittrexAPI:
         self._throttler = throttler or self._init_throttler()
         self._session = session or self._init_session(timeout)
 
-    def _init_throttler(self) -> Throttler:
+    @staticmethod
+    def _init_throttler() -> Throttler:
         return Throttler(rate_limit=60, period=60.0)  # https://bittrex.github.io/api/v1-1#call-limits
 
     def _init_session(self, timeout: int) -> aiohttp.ClientSession:
