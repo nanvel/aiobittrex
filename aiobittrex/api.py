@@ -1,10 +1,10 @@
 import asyncio
 import hashlib
 import hmac
-import time
 from asyncio import AbstractEventLoop
+from time import time
 from typing import Optional, Dict
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urlencode
 
 import aiohttp
 from asyncio_throttle import Throttler
@@ -18,7 +18,7 @@ class BittrexAPI:
 
     https://github.com/ericsomdahl/python-bittrex/blob/master/bittrex/bittrex.py
     """
-    API_URL = 'https://bittrex.com/api/'
+    API_URL = 'https://bittrex.com/api'
 
     def __init__(
             self,
@@ -54,26 +54,33 @@ class BittrexAPI:
         await asyncio.sleep(delay)
         await self._session.close()
 
-    async def query(self, path, options=None, authenticate=False, version='v1.1'):
+    async def _request(self, path, options=None, authenticate=False, version='v1.1'):
         options = options or {}
 
-        if path.startswith('/'):
-            path = path[1:]
-        url = urljoin(self.API_URL + version + '/', path)
-
         if authenticate:
-            nonce = str(int(time.time() * 1000))
-            url = "{url}?apikey={api_key}&nonce={nonce}".format(
-                url=url, api_key=self.api_key, nonce=nonce
+            options.update(
+                {
+                    'apikey': self.api_key,
+                    'nonce': self._nonce()
+                }
             )
-            if options:
-                url += '&' + urlencode(options)
-        elif options:
-            url += '?' + urlencode(options)
+
+        url = self._compose_url(version, path, options)
+        headers = {'apisign': self._get_signature(url)} if authenticate else {}
 
         async with self._throttler:
-            async with self._session.get(url, headers={'apisign': self._get_signature(url)}) as response:
+            async with self._session.get(url=url, headers=headers) as response:
                 return await self._handle_response(response)
+
+    @staticmethod
+    def _nonce() -> str:
+        return f'{int(time() * 1000)}'
+
+    def _compose_url(self, version: str, path: str, options: Dict) -> str:
+        result = f'{self.API_URL}/{version}/{path}'
+        if options:
+            result = f'{result}?{urlencode(options)}'
+        return result
 
     def _get_signature(self, url: str) -> str:
         return hmac.new(
@@ -115,7 +122,7 @@ class BittrexAPI:
             "LogoUrl": "https://bittrexblobstorage.blob.core.windows.net/public/6defbc41-582d-47a6-bb2e-d0fa88663524.png"
         }]
         """
-        return self.query(path='/public/getmarkets')
+        return self._request(path='public/getmarkets')
 
     def get_currencies(self):
         """
@@ -131,7 +138,7 @@ class BittrexAPI:
             "Notice": null
         }]
         """
-        return self.query(path='/public/getcurrencies')
+        return self._request(path='public/getcurrencies')
 
     def get_ticker(self, market):
         """
@@ -142,7 +149,7 @@ class BittrexAPI:
             "Last": 0.01702595
         }
         """
-        return self.query(path='/public/getticker', options={'market': market})
+        return self._request(path='public/getticker', options={'market': market})
 
     def get_market_summaries(self):
         """
@@ -163,10 +170,10 @@ class BittrexAPI:
             "Created": "2014-02-13T00:00:00"
         }]
         """
-        return self.query(path='/public/getmarketsummaries')
+        return self._request(path='public/getmarketsummaries')
 
     async def get_market_summary(self, market):
-        result = await self.query(path='/public/getmarketsummary', options={'market': market})
+        result = await self._request(path='public/getmarketsummary', options={'market': market})
         """
         Get the last 24 hour summary of a specific market.
         {
@@ -203,8 +210,8 @@ class BittrexAPI:
             }]
         }
         """
-        return self.query(
-            path='/public/getorderbook',
+        return self._request(
+            path='public/getorderbook',
             options={'market': market, 'type': order_type}
         )
 
@@ -229,7 +236,7 @@ class BittrexAPI:
             "OrderType": "BUY"
         }]
         """
-        return self.query(path='/public/getmarkethistory', options={'market': market})
+        return self._request(path='public/getmarkethistory', options={'market': market})
 
     def buy_limit(self, market, quantity, rate):
         """
@@ -238,8 +245,8 @@ class BittrexAPI:
             "uuid": "614c34e4-8d71-11e3-94b5-425861b86ab6"
         }
         """
-        return self.query(
-            path='/market/buylimit',
+        return self._request(
+            path='market/buylimit',
             options={'market': market, 'quantity': quantity, 'rate': rate},
             authenticate=True,
         )
@@ -251,8 +258,8 @@ class BittrexAPI:
             "uuid": "614c34e4-8d71-11e3-94b5-425861b86ab6"
         }
         """
-        return self.query(
-            path='/market/selllimit',
+        return self._request(
+            path='market/selllimit',
             options={'market': market, 'quantity': quantity, 'rate': rate},
             authenticate=True,
         )
@@ -261,8 +268,8 @@ class BittrexAPI:
         """
         Cancel a buy or sell order.
         """
-        return self.query(
-            path='/market/cancel',
+        return self._request(
+            path='market/cancel',
             options={'uuid': order_id},
             authenticate=True
         )
@@ -290,8 +297,8 @@ class BittrexAPI:
             "ConditionTarget": null
         }]
         """
-        return self.query(
-            path='/market/getopenorders',
+        return self._request(
+            path='market/getopenorders',
             options={'market': market} if market else None,
             authenticate=True
         )
@@ -313,8 +320,8 @@ class BittrexAPI:
             "CryptoAddress": "1JQts7UT3gYTs31p6k5YGj3qjcRQ6XAXsn"
         }]
         """
-        return self.query(
-            path='/account/getbalances',
+        return self._request(
+            path='account/getbalances',
             authenticate=True
         )
 
@@ -329,8 +336,8 @@ class BittrexAPI:
             "CryptoAddress": "1JQts7UT3gYTs31p6k5YGj3qjcRQ6XAXsn"
         }
         """
-        return self.query(
-            path='/account/getbalance',
+        return self._request(
+            path='account/getbalance',
             options={'currency': currency},
             authenticate=True
         )
@@ -343,8 +350,8 @@ class BittrexAPI:
             "Address": "1JQts7UT3gYTs31p6k5YGj3qjcRQ6XAXsn"
         }
         """
-        return self.query(
-            path='/account/getdepositaddress',
+        return self._request(
+            path='account/getdepositaddress',
             options={'currency': currency},
             authenticate=True
         )
@@ -356,8 +363,8 @@ class BittrexAPI:
             "uuid": "68b5a16c-92de-11e3-ba3b-425861b86ab6"
         }
         """
-        return self.query(
-            path='/account/withdraw',
+        return self._request(
+            path='account/withdraw',
             options={'currency': currency, 'quantity': quantity, 'address': address},
             authenticate=True
         )
@@ -391,8 +398,8 @@ class BittrexAPI:
             "ConditionTarget": null
         }
         """
-        return self.query(
-            path='/account/getorder',
+        return self._request(
+            path='account/getorder',
             options={'uuid': order_id},
             authenticate=True
         )
@@ -417,8 +424,8 @@ class BittrexAPI:
             "ImmediateOrCancel": false
         }]
         """
-        return self.query(
-            path='/account/getorderhistory',
+        return self._request(
+            path='account/getorderhistory',
             options={'market': market} if market else None,
             authenticate=True
         )
@@ -440,8 +447,8 @@ class BittrexAPI:
             "InvalidAddress": false
         }]
         """
-        return self.query(
-            path='/account/getwithdrawalhistory',
+        return self._request(
+            path='account/getwithdrawalhistory',
             options={'currency': currency} if currency else None,
             authenticate=True
         )
@@ -459,8 +466,8 @@ class BittrexAPI:
             "CryptoAddress": "1JQts7UT3gYTs31p6k5YGj3qjcRQ6XAXsn"
         }]
         """
-        return self.query(
-            path='/account/getdeposithistory',
+        return self._request(
+            path='account/getdeposithistory',
             options={'currency': currency} if currency else None,
             authenticate=True
         )
@@ -494,8 +501,8 @@ class BittrexAPI:
             }
         }]
         """
-        return self.query(
-            path='/pub/Currencies/GetWalletHealth',
+        return self._request(
+            path='pub/Currencies/GetWalletHealth',
             version='v2.0'
         )
 
@@ -503,8 +510,8 @@ class BittrexAPI:
         """
         Get the account pending withdrawals.
         """
-        return self.query(
-            path='/key/balance/getpendingwithdrawals',
+        return self._request(
+            path='key/balance/getpendingwithdrawals',
             options={'currency': currency} if currency else None,
             authenticate=True,
             version='v2.0'
@@ -514,8 +521,8 @@ class BittrexAPI:
         """
         Get the account pending deposits.
         """
-        return self.query(
-            path='/key/balance/getpendingdeposits',
+        return self._request(
+            path='key/balance/getpendingdeposits',
             options={'currency': currency} if currency else None,
             authenticate=True,
             version='v2.0'
@@ -535,8 +542,8 @@ class BittrexAPI:
             "BV": 0.83816494
         }]
         """
-        return self.query(
-            path='/pub/market/GetTicks',
+        return self._request(
+            path='pub/market/GetTicks',
             options={'marketName': market, 'tickInterval': tick_interval},
             version='v2.0'
         )
@@ -554,8 +561,8 @@ class BittrexAPI:
             "BV": 0.04018997
         }
         """
-        result = await self.query(
-            path='/pub/market/GetLatestTick',
+        result = await self._request(
+            path='pub/market/GetLatestTick',
             options={'marketName': market, 'tickInterval': tick_interval},
             version='v2.0'
         )
