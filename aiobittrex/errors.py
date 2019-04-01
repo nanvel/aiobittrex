@@ -1,23 +1,32 @@
 class BittrexError(Exception):
+    pass
 
+
+class BittrexRestApiError(BittrexError):
+    pass
+
+
+class BittrexApiError(BittrexRestApiError):
     def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return "BittrexError: {}".format(self.message)
+        self.message = message or 'Unknown error'
 
 
-class BittrexSocketError(Exception):
-    def __init__(self, data):
-        self.data = data
+class BittrexResponseError(BittrexRestApiError):
+    def __init__(self, status: int, content: str):
+        self.status = status
+        self.content = content
 
-    def __str__(self):
-        return "BittrexSocketError: {}".format(self.message)
+    def __str__(self) -> str:
+        return f'[{self.status}] {self.content!r}'
 
 
-class BittrexSocketConnectionClosed(Exception):
+class BittrexSocketError(BittrexError):
+    pass
+
+
+class BittrexSocketConnectionClosed(BittrexSocketError):
     pass  # TODO clarify error code & message
 
 
-class BittrexSocketConnectionError(Exception):
+class BittrexSocketConnectionError(BittrexSocketError):
     pass  # TODO clarify error code & message

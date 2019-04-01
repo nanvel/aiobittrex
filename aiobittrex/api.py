@@ -3,13 +3,13 @@ import hashlib
 import hmac
 import time
 from asyncio import AbstractEventLoop
-from typing import Optional
+from typing import Optional, Dict
 from urllib.parse import urlencode, urljoin
 
 import aiohttp
 from asyncio_throttle import Throttler
 
-from .errors import BittrexError
+from .errors import BittrexResponseError, BittrexApiError, BittrexRestApiError
 
 
 class BittrexAPI:
@@ -65,10 +65,7 @@ class BittrexAPI:
 
         async with self._throttler:
             async with self._session.get(url, headers={'apisign': self._get_signature(url)}) as response:
-                j = await response.json()
-                if not j['success']:
-                    raise BittrexError(message=j.get('message', "Unknown error."))
-                return j['result']
+                return await self._handle_response(response)
 
     def _get_signature(self, url: str) -> str:
         return hmac.new(
@@ -76,6 +73,22 @@ class BittrexAPI:
             msg=url.encode(),
             digestmod=hashlib.sha512
         ).hexdigest()
+
+    async def _handle_response(self, response: aiohttp.ClientResponse) -> Dict:
+        try:
+            response_json = await response.json()
+        except aiohttp.ContentTypeError:
+            raise BittrexResponseError(response.status, await response.text())
+        except Exception as e:
+            raise BittrexRestApiError(e)
+        else:
+            self._raise_if_error(response_json)
+            return response_json['result']
+
+    @staticmethod
+    def _raise_if_error(response_json: Dict) -> None:
+        if not response_json['success']:
+            raise BittrexApiError(response_json.get('message'))
 
     def get_markets(self):
         """
