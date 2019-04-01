@@ -12,7 +12,8 @@ from .errors import BittrexError
 
 class BittrexAPI:
     """
-    https://bittrex.com/home/api -> https://support.bittrex.com/hc/en-us/articles/115003723911
+    API Reference: https://bittrex.github.io/api/v1-1
+
     https://github.com/ericsomdahl/python-bittrex/blob/master/bittrex/bittrex.py
     """
     API_URL = 'https://bittrex.com/api/'
