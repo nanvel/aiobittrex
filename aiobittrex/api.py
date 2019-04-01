@@ -7,6 +7,7 @@ from typing import Optional, Dict
 from urllib.parse import urlencode
 
 import aiohttp
+from aiohttp import ClientTimeout
 from asyncio_throttle import Throttler
 
 from .errors import BittrexResponseError, BittrexApiError, BittrexRestError
@@ -43,7 +44,7 @@ class BittrexAPI:
         return aiohttp.ClientSession(
             loop=self._loop,
             headers={'Content-Type': 'application/json'},
-            read_timeout=timeout
+            timeout=ClientTimeout(total=timeout)
         )
 
     async def close(self, delay: float = 0.250):
