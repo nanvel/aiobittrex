@@ -46,6 +46,14 @@ class BittrexAPI:
             read_timeout=timeout
         )
 
+    async def close(self, delay: float = 0.250):
+        '''Graceful shutdown.
+
+        https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+        '''
+        await asyncio.sleep(delay)
+        await self._session.close()
+
     async def query(self, path, options=None, authenticate=False, version='v1.1'):
         options = options or {}
 
