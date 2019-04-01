@@ -1,11 +1,12 @@
-import asyncio
 import hashlib
 import hmac
 import time
+from typing import Optional
 from urllib.parse import urlencode, urljoin
 
 import aiohttp
 import async_timeout
+from asyncio_throttle import Throttler
 
 from .errors import BittrexError
 
@@ -18,19 +19,17 @@ class BittrexAPI:
     """
     API_URL = 'https://bittrex.com/api/'
 
-    def __init__(self, api_key=None, api_secret=None, call_rate=1):
-        """
-        :param api_key: Bittrex api key
-        :param api_secret: Bittrex api secret
-        :param call_rate: limit requests per seconds
-        """
+    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None, throttler: Throttler = None):
         self.api_key = api_key or ''
         self.api_secret = api_secret or ''
-        self.call_interval = 1. / call_rate
-        self.timeout = 20
-        self._last_call = time.time() - self.call_interval
+        self._throttler = throttler or self._init_throttler()
 
-    async def query(self, path, options=None, authenticate=False, priority=False, version='v1.1'):
+        self.timeout = 20
+
+    def _init_throttler(self) -> Throttler:
+        return Throttler(rate_limit=60, period=60.0)  # https://bittrex.github.io/api/v1-1#call-limits
+
+    async def query(self, path, options=None, authenticate=False, version='v1.1'):
         options = options or {}
 
         if path.startswith('/'):
@@ -53,16 +52,11 @@ class BittrexAPI:
             digestmod=hashlib.sha512
         ).hexdigest()
 
-        if not priority:
-            to_wait = time.time() - self._last_call + self.call_interval
-            if to_wait > 0:
-                await asyncio.sleep(to_wait)
-
-        try:
-            headers = {
-                'apisign': signature,
-                'Content-Type': 'application/json'
-            }
+        headers = {
+            'apisign': signature,
+            'Content-Type': 'application/json'
+        }
+        async with self._throttler:
             async with aiohttp.ClientSession(headers=headers) as session:
                 with async_timeout.timeout(self.timeout):
                     async with session.get(url) as response:
@@ -70,8 +64,6 @@ class BittrexAPI:
                         if not j['success']:
                             raise BittrexError(message=j.get('message', "Unknown error."))
                         return j['result']
-        finally:
-            self._last_call = time.time()
 
     def get_markets(self):
         """
@@ -217,7 +209,6 @@ class BittrexAPI:
             path='/market/buylimit',
             options={'market': market, 'quantity': quantity, 'rate': rate},
             authenticate=True,
-            priority=True
         )
 
     def sell_limit(self, market, quantity, rate):
@@ -231,7 +222,6 @@ class BittrexAPI:
             path='/market/selllimit',
             options={'market': market, 'quantity': quantity, 'rate': rate},
             authenticate=True,
-            priority=True
         )
 
     def cancel_order(self, order_id):
