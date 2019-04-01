@@ -10,7 +10,7 @@ from zlib import decompress, MAX_WBITS
 
 import aiohttp
 
-from .errors import BittrexSocketConnectionClosed, BittrexSocketConnectionError, BittrexSocketError
+from aiobittrex import BittrexSocketError, BittrexSocketConnectionClosed, BittrexSocketConnectionError
 
 logger = logging.getLogger(__name__)
 

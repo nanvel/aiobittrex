@@ -2,16 +2,16 @@ class BittrexError(Exception):
     pass
 
 
-class BittrexRestApiError(BittrexError):
+class BittrexRestError(BittrexError):
     pass
 
 
-class BittrexApiError(BittrexRestApiError):
+class BittrexApiError(BittrexRestError):
     def __init__(self, message):
         self.message = message or 'Unknown error'
 
 
-class BittrexResponseError(BittrexRestApiError):
+class BittrexResponseError(BittrexRestError):
     def __init__(self, status: int, content: str):
         self.status = status
         self.content = content

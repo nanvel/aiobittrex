@@ -9,7 +9,7 @@ from urllib.parse import urlencode, urljoin
 import aiohttp
 from asyncio_throttle import Throttler
 
-from .errors import BittrexResponseError, BittrexApiError, BittrexRestApiError
+from .errors import BittrexResponseError, BittrexApiError, BittrexRestError
 
 
 class BittrexAPI:
@@ -88,7 +88,7 @@ class BittrexAPI:
         except aiohttp.ContentTypeError:
             raise BittrexResponseError(response.status, await response.text())
         except Exception as e:
-            raise BittrexRestApiError(e)
+            raise BittrexRestError(e)
         else:
             self._raise_if_error(response_json)
             return response_json['result']
