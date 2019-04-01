@@ -1,11 +1,12 @@
+import asyncio
 import hashlib
 import hmac
 import time
+from asyncio import AbstractEventLoop
 from typing import Optional
 from urllib.parse import urlencode, urljoin
 
 import aiohttp
-import async_timeout
 from asyncio_throttle import Throttler
 
 from .errors import BittrexError
@@ -19,15 +20,30 @@ class BittrexAPI:
     """
     API_URL = 'https://bittrex.com/api/'
 
-    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None, throttler: Throttler = None):
+    def __init__(
+            self,
+            api_key: Optional[str] = None,
+            api_secret: Optional[str] = None,
+            throttler: Throttler = None,
+            loop: AbstractEventLoop = None,
+            session: aiohttp.ClientSession = None,
+            timeout: int = 20
+    ):
         self.api_key = api_key or ''
         self.api_secret = api_secret or ''
+        self._loop = loop or asyncio.get_event_loop()
         self._throttler = throttler or self._init_throttler()
-
-        self.timeout = 20
+        self._session = session or self._init_session(timeout)
 
     def _init_throttler(self) -> Throttler:
         return Throttler(rate_limit=60, period=60.0)  # https://bittrex.github.io/api/v1-1#call-limits
+
+    def _init_session(self, timeout: int) -> aiohttp.ClientSession:
+        return aiohttp.ClientSession(
+            loop=self._loop,
+            headers={'Content-Type': 'application/json'},
+            read_timeout=timeout
+        )
 
     async def query(self, path, options=None, authenticate=False, version='v1.1'):
         options = options or {}
@@ -52,18 +68,12 @@ class BittrexAPI:
             digestmod=hashlib.sha512
         ).hexdigest()
 
-        headers = {
-            'apisign': signature,
-            'Content-Type': 'application/json'
-        }
         async with self._throttler:
-            async with aiohttp.ClientSession(headers=headers) as session:
-                with async_timeout.timeout(self.timeout):
-                    async with session.get(url) as response:
-                        j = await response.json()
-                        if not j['success']:
-                            raise BittrexError(message=j.get('message', "Unknown error."))
-                        return j['result']
+            async with self._session.get(url, headers={'apisign': signature}) as response:
+                j = await response.json()
+                if not j['success']:
+                    raise BittrexError(message=j.get('message', "Unknown error."))
+                return j['result']
 
     def get_markets(self):
         """
