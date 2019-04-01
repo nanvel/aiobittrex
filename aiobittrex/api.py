@@ -63,18 +63,19 @@ class BittrexAPI:
         elif options:
             url += '?' + urlencode(options)
 
-        signature = hmac.new(
-            key=self.api_secret.encode(),
-            msg=url.encode(),
-            digestmod=hashlib.sha512
-        ).hexdigest()
-
         async with self._throttler:
-            async with self._session.get(url, headers={'apisign': signature}) as response:
+            async with self._session.get(url, headers={'apisign': self._get_signature(url)}) as response:
                 j = await response.json()
                 if not j['success']:
                     raise BittrexError(message=j.get('message', "Unknown error."))
                 return j['result']
+
+    def _get_signature(self, url: str) -> str:
+        return hmac.new(
+            key=self.api_secret.encode(),
+            msg=url.encode(),
+            digestmod=hashlib.sha512
+        ).hexdigest()
 
     def get_markets(self):
         """
