@@ -91,8 +91,8 @@ class BittrexSocket:
         self._loop = loop or asyncio.get_event_loop()
         self._session = aiohttp.ClientSession(loop=loop)
 
-    def __del__(self):
-        self._loop.run_until_complete(self._session.close())
+    async def close(self):
+        await self._session.close()
 
     @staticmethod
     def _decode(message):
