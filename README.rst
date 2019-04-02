@@ -10,24 +10,23 @@ Usage
 
 .. code-block:: python
 
-    import asyncio
-    import json
+	import asyncio
 
-    from aiobittrex import BittrexAPI, BittrexError
-
-
-    async def main():
-        api = BittrexAPI()
-        try:
-            result = await api.get_markets()
-            print(json.dumps(result, indent=2))
-        except BittrexError as e:
-            print(e)
+	from aiobittrex import BittrexAPI, BittrexApiError, BittrexResponseError
 
 
-    if __name__ == '__main__':
-        ioloop = asyncio.get_event_loop()
-        ioloop.run_until_complete(main())
+	async def main():
+	    api = BittrexAPI()
+	    try:
+	        result = await api.get_markets()
+	    except BittrexApiError as e:
+	        print(e)
+	    except BittrexResponseError as e:
+	        print('Invalid response:', e)
+	    else:
+	        print(result)
+	    finally:
+	        await api.close()
 
 
 V1 API

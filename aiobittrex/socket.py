@@ -10,7 +10,7 @@ from zlib import decompress, MAX_WBITS
 
 import aiohttp
 
-from .errors import BittrexError
+from aiobittrex import BittrexSocketError, BittrexSocketConnectionClosed, BittrexSocketConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +91,8 @@ class BittrexSocket:
         self._loop = loop or asyncio.get_event_loop()
         self._session = aiohttp.ClientSession(loop=loop)
 
-    def __del__(self):
-        self._loop.run_until_complete(self._session.close())
+    async def close(self):
+        await self._session.close()
 
     @staticmethod
     def _decode(message):
@@ -157,12 +157,14 @@ class BittrexSocket:
             if msg.type == aiohttp.WSMsgType.TEXT:
                 decoded_message = json.loads(msg.data)
                 if 'E' in decoded_message:
-                    raise BittrexError(message=decoded_message['E'])
+                    raise BittrexSocketError(decoded_message['E'])
                 yield decoded_message
             elif msg.type == aiohttp.WSMsgType.closed:
-                break
+                logger.warning('Websocket connection closed: %s', msg)
+                raise BittrexSocketConnectionClosed
             elif msg.type == aiohttp.WSMsgType.error:
-                break
+                logger.error('Websocket connection error: %s', msg)
+                raise BittrexSocketConnectionError
             else:
                 logger.warning("Message: {}".format(msg.type))
 

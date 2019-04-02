@@ -58,6 +58,7 @@ setup(
     package_data={'': ['requirements.txt']},
     include_package_data=True,
     install_requires=[
-        'aiohttp'
+        'aiohttp==3.5.4',
+        'asyncio-throttle==0.1.1'
     ]
 )
