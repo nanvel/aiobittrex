@@ -4,3 +4,6 @@ Reusing aiohttp session, extract websockets connect creation
 ---
 0.1.1
 Socket fixes
+----
+0.2.0
+refactoring, throttle, fixes

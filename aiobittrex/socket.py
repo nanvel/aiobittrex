@@ -12,6 +12,7 @@ import aiohttp
 
 from aiobittrex import BittrexSocketError, BittrexSocketConnectionClosed, BittrexSocketConnectionError
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -174,8 +175,7 @@ class BittrexSocket:
                 return m['R']
 
     async def listen_account(self, ws=None):
-        """
-        Listen to account balance and orders updates.
+        """Listen to account balance and orders updates
 
         callbacks:
         uB - balance delta
@@ -234,8 +234,7 @@ class BittrexSocket:
         return result
 
     async def listen_market(self, markets, ws=None):
-        """
-        Listen to market updates.
+        """Listen to market updates
 
         callbacks:
         - uE - market delta

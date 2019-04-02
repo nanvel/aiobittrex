@@ -14,8 +14,7 @@ from .errors import BittrexResponseError, BittrexApiError, BittrexRestError
 
 
 class BittrexAPI:
-    """
-    API Reference: https://bittrex.github.io/api/v1-1
+    """API Reference: https://bittrex.github.io/api/v1-1
 
     https://github.com/ericsomdahl/python-bittrex/blob/master/bittrex/bittrex.py
     """
@@ -48,10 +47,10 @@ class BittrexAPI:
         )
 
     async def close(self, delay: float = 0.250):
-        '''Graceful shutdown.
+        """Graceful shutdown
 
         https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        '''
+        """
         await asyncio.sleep(delay)
         await self._session.close()
 
@@ -59,12 +58,10 @@ class BittrexAPI:
         options = options or {}
 
         if authenticate:
-            options.update(
-                {
-                    'apikey': self.api_key,
-                    'nonce': self._nonce()
-                }
-            )
+            options.update({
+                'apikey': self.api_key,
+                'nonce': self._nonce()
+            })
 
         url = self._compose_url(version, path, options)
         headers = {'apisign': self._get_signature(url)} if authenticate else {}
@@ -107,8 +104,7 @@ class BittrexAPI:
             raise BittrexApiError(response_json.get('message'))
 
     def get_markets(self):
-        """
-        Get the open and available trading markets at Bittrex along with other meta data.
+        """Get the open and available trading markets at Bittrex along with other meta data
         [{
             "MarketCurrency": "LTC",
             "BaseCurrency": "BTC",
@@ -126,8 +122,7 @@ class BittrexAPI:
         return self._request(path='public/getmarkets')
 
     def get_currencies(self):
-        """
-        Get all supported currencies at Bittrex along with other meta data.
+        """Get all supported currencies at Bittrex along with other meta data
         [{
             "Currency": "BTC",
             "CurrencyLong": "Bitcoin",
@@ -142,8 +137,7 @@ class BittrexAPI:
         return self._request(path='public/getcurrencies')
 
     def get_ticker(self, market):
-        """
-        Get the current tick values for a market.
+        """Get the current tick values for a market
         {
             "Bid": 0.01702595,
             "Ask": 0.01709242,
@@ -153,8 +147,7 @@ class BittrexAPI:
         return self._request(path='public/getticker', options={'market': market})
 
     def get_market_summaries(self):
-        """
-        Get the last 24 hour summary of all active markets.
+        """Get the last 24 hour summary of all active markets
         [{
             "MarketName": "BTC-LTC",
             "High": 0.01717,
@@ -174,9 +167,7 @@ class BittrexAPI:
         return self._request(path='public/getmarketsummaries')
 
     async def get_market_summary(self, market):
-        result = await self._request(path='public/getmarketsummary', options={'market': market})
-        """
-        Get the last 24 hour summary of a specific market.
+        """Get the last 24 hour summary of a specific market
         {
             "MarketName": "BTC-LTC",
             "High": 0.01717,
@@ -193,12 +184,12 @@ class BittrexAPI:
             "Created": "2014-02-13T00:00:00"
         }
         """
+        result = await self._request(path='public/getmarketsummary', options={'market': market})
         if result:
             return result[0]
 
     def get_order_book(self, market, order_type='both'):
-        """
-        Retrieve the orderbook for a given market.
+        """Retrieve the orderbook for a given market
         :param order_type: 'buy', 'sell', 'both'
         {
             "buy": [{
@@ -217,8 +208,7 @@ class BittrexAPI:
         )
 
     def get_market_history(self, market):
-        """
-        Retrieve the latest trades that have occurred for a specific market.
+        """Retrieve the latest trades that have occurred for a specific market
         [{
             "Id": 159594115,
             "TimeStamp": "2018-04-23T12:59:56.333",
@@ -240,8 +230,7 @@ class BittrexAPI:
         return self._request(path='public/getmarkethistory', options={'market': market})
 
     def buy_limit(self, market, quantity, rate):
-        """
-        Place a buy order.
+        """Place a buy order
         {
             "uuid": "614c34e4-8d71-11e3-94b5-425861b86ab6"
         }
@@ -253,8 +242,7 @@ class BittrexAPI:
         )
 
     def sell_limit(self, market, quantity, rate):
-        """
-        Place a sell order.
+        """Place a sell order
         {
             "uuid": "614c34e4-8d71-11e3-94b5-425861b86ab6"
         }
@@ -266,8 +254,7 @@ class BittrexAPI:
         )
 
     def cancel_order(self, order_id):
-        """
-        Cancel a buy or sell order.
+        """Cancel a buy or sell order
         """
         return self._request(
             path='market/cancel',
@@ -276,8 +263,7 @@ class BittrexAPI:
         )
 
     def get_open_orders(self, market=None):
-        """
-        Get open orders, a market can be specified.
+        """Get open orders, a market can be specified
         [{
             "Uuid": null,
             "OrderUuid": "09aa5bb6-8232-41aa-9b78-a5a1093e0211",
@@ -305,8 +291,7 @@ class BittrexAPI:
         )
 
     def get_balances(self):
-        """
-        Retrieve all balances for the account.
+        """Retrieve all balances for the account
         [{
             "Currency": "BSD",
             "Balance": 0.0,
@@ -327,8 +312,7 @@ class BittrexAPI:
         )
 
     def get_balance(self, currency):
-        """
-        Retrieve balance for specific currency.
+        """Retrieve balance for specific currency
         {
             "Currency": "BTC",
             "Balance": 6e-08,
@@ -344,8 +328,7 @@ class BittrexAPI:
         )
 
     def get_deposit_address(self, currency):
-        """
-        Retrieve or generate an address for a specific currency.
+        """Retrieve or generate an address for a specific currency
         {
             "Currency": "BTC",
             "Address": "1JQts7UT3gYTs31p6k5YGj3qjcRQ6XAXsn"
@@ -358,8 +341,7 @@ class BittrexAPI:
         )
 
     def withdraw(self, currency, quantity, address):
-        """
-        Withdraw funds from the account.
+        """Withdraw funds from the account
         {
             "uuid": "68b5a16c-92de-11e3-ba3b-425861b86ab6"
         }
@@ -371,8 +353,7 @@ class BittrexAPI:
         )
 
     def get_order(self, order_id):
-        """
-        Retrieve a single order by uuid.
+        """Retrieve a single order by uuid
         {
             "AccountId": null,
             "OrderUuid": "0cb4c4e4-bdc7-4e13-8c13-430e587d2cc1",
@@ -406,8 +387,7 @@ class BittrexAPI:
         )
 
     def get_order_history(self, market=None):
-        """
-        Retrieve order history.
+        """Retrieve order history
         [{
             "OrderUuid": "fd97d393-e9b9-4dd1-9dbf-f288fc72a185",
             "Exchange": "BTC-LTC",
@@ -432,8 +412,7 @@ class BittrexAPI:
         )
 
     def get_withdrawal_history(self, currency=None):
-        """
-        Retrieve the account withdrawal history.
+        """Retrieve the account withdrawal history
         [{
             "PaymentUuid": "88048b42-7a13-4f57-8b7e-109aeeca07d7",
             "Currency": "SAFEX",
@@ -455,8 +434,7 @@ class BittrexAPI:
         )
 
     def get_deposit_history(self, currency=None):
-        """
-        Retrieve the account deposit history.
+        """Retrieve the account deposit history
         [{
             "Id": 41565639,
             "Amount": 0.008,
@@ -476,8 +454,7 @@ class BittrexAPI:
     # v2.0
 
     def get_wallet_health(self):
-        """
-        View wallets health.
+        """View wallets health
         [{
             "Health": {
                 "Currency": "BTC",
@@ -508,8 +485,7 @@ class BittrexAPI:
         )
 
     def get_pending_withdrawals(self, currency=None):
-        """
-        Get the account pending withdrawals.
+        """Get the account pending withdrawals
         """
         return self._request(
             path='key/balance/getpendingwithdrawals',
@@ -519,8 +495,7 @@ class BittrexAPI:
         )
 
     def get_pending_deposits(self, currency=None):
-        """
-        Get the account pending deposits.
+        """Get the account pending deposits
         """
         return self._request(
             path='key/balance/getpendingdeposits',
@@ -530,8 +505,7 @@ class BittrexAPI:
         )
 
     def get_candles(self, market, tick_interval):
-        """
-        Get tick candles for market.
+        """Get tick candles for market
         Intervals: oneMin, fiveMin, hour, day
         [{
             "O": 0.017059,
@@ -550,8 +524,7 @@ class BittrexAPI:
         )
 
     async def get_latest_candle(self, market, tick_interval):
-        """
-        Get the latest candle for the market.
+        """Get the latest candle for the marke
         {
             "O": 0.017125,
             "H": 0.017125,

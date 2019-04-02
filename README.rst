@@ -10,23 +10,23 @@ Usage
 
 .. code-block:: python
 
-	import asyncio
+    import asyncio
 
-	from aiobittrex import BittrexAPI, BittrexApiError, BittrexResponseError
+    from aiobittrex import BittrexAPI, BittrexApiError, BittrexResponseError
 
 
-	async def main():
-	    api = BittrexAPI()
-	    try:
-	        result = await api.get_markets()
-	    except BittrexApiError as e:
-	        print(e)
-	    except BittrexResponseError as e:
-	        print('Invalid response:', e)
-	    else:
-	        print(result)
-	    finally:
-	        await api.close()
+    async def main():
+        api = BittrexAPI()
+        try:
+            result = await api.get_markets()
+        except BittrexApiError as e:
+            print(e)
+        except BittrexResponseError as e:
+            print('Invalid response:', e)
+        else:
+            print(result)
+        finally:
+            await api.close()
 
 
 V1 API

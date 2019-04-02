@@ -25,8 +25,8 @@ class BittrexSocketError(BittrexError):
 
 
 class BittrexSocketConnectionClosed(BittrexSocketError):
-    pass  # TODO clarify error code & message
+    pass  # TODO: clarify error code & message
 
 
 class BittrexSocketConnectionError(BittrexSocketError):
-    pass  # TODO clarify error code & message
+    pass  # TODO: clarify error code & message
