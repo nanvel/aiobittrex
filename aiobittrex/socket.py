@@ -180,6 +180,51 @@ class BittrexSocket:
         callbacks:
         uB - balance delta
         uO - order delta
+
+        {
+            "nonce": 24,
+            "delta": {
+                "uuid": "1a601d8b-c74f-4b93-2582-06eb8984d79f",
+                "account_id": 2112345,
+                "currency": "LTC",
+                "balance": 0.60775669,
+                "available": 4.8e-07,
+                "pending": 0.0,
+                "crypto_address": null,
+                "requested": false,
+                "updated": 1558239377660,
+                "auto_sell": null
+            }
+        }
+
+        {
+            "account_uuid": "1a601d8b-c74f-4b93-2582-06eb8984d79f",
+            "nonce": 15,
+            "type": 0,
+            "order": {
+                "uuid": "1a601d8b-c74f-4b93-2582-06eb8984d79f",
+                "id": 935252102,
+                "order_uuid": "aab92e5d-350e-434b-b8e1-c42b354c5e17",
+                "exchange": "BTC-LTC",
+                "order_type": "LIMIT_SELL",
+                "quantity": 0.22809,
+                "quantity_remaining": 0.22809,
+                "limit": 0.01189602,
+                "commission_paid": 0.0,
+                "price": 0.0,
+                "price_per_unit": 0.0,
+                "opened": 1558239377660,
+                "closed": null,
+                "is_open": true,
+                "cancel_initiated": false,
+                "immediate_or_cancel": false,
+                "is_conditional": false,
+                "condition": null,
+                "condition_target": null,
+                "updated": 1558239377660,
+                "PassthroughUuid": null
+            }
+        }
         """
         challenge = await self._get_auth_context(ws)
         signature = hmac.new(
