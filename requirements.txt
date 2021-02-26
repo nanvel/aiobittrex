@@ -1,2 +1,2 @@
-aiohttp==3.5.4
+aiohttp==3.7.4
 asyncio-throttle==0.1.1
